@@ -53,9 +53,7 @@ module.exports =
 
 	var _react2 = _interopRequireDefault(_react);
 
-	var _objectAssign = __webpack_require__(2);
-
-	var _objectAssign2 = _interopRequireDefault(_objectAssign);
+	var _lodash = __webpack_require__(2);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -87,7 +85,7 @@ module.exports =
 		_createClass(ReactCrop, [{
 			key: 'nextCropState',
 			value: function nextCropState(crop) {
-				var nextCrop = (0, _objectAssign2.default)({}, ReactCrop.defaultCrop, crop);
+				var nextCrop = (0, _lodash.assign)({}, ReactCrop.defaultCrop, crop);
 				this.cropInvalid = this.isCropInvalid(nextCrop);
 				return nextCrop;
 			}
@@ -841,7 +839,7 @@ module.exports =
 /* 2 */
 /***/ function(module, exports) {
 
-	module.exports = require("object-assign");
+	module.exports = require("lodash");
 
 /***/ }
 /******/ ]);

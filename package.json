@@ -47,6 +47,6 @@
   },
   "peerDependencies": {
     "react": "^15.1.0",
-    "object-assign": "*"
+    "lodash": "^4.0.0"
   }
 }

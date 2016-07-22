@@ -10,7 +10,7 @@ module.exports = {
 	},
 	externals: {
 		'react': 'react',
-		'object-assign': 'object-assign',
+		'lodash': 'lodash',
 	},
 	module: {
 		loaders: [{
