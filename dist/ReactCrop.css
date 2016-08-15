@@ -52,6 +52,11 @@
   border: 1px dashed rgba(255, 255, 255, 0.7);
   border-radius: 100%; }
 
+.ReactCrop-ellipse .ReactCrop--crop-selection {
+  background-image: none;
+  border: 1px dashed rgba(255, 255, 255, 0.7);
+  border-radius: 100%; }
+
 @keyframes marching-ants {
   0% {
     background-position: 0 0,  0 100%,  0 0,  100% 0; }

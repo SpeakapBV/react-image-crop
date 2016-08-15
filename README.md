@@ -72,6 +72,14 @@ A minimum crop width.
 
 A minimum crop height.
 
+#### maxWidth (optional)
+
+A maximum crop width.
+
+#### maxHeight (optional)
+
+A maximum crop height.
+
 #### keepSelection (optional)
 
 If true is passed then selection can't be disabled if the user clicks outside the selection area.
@@ -91,6 +99,14 @@ A callback which happens after a resize, drag, or nudge. Passes the current crop
 #### onImageLoaded(crop, image) (optional)
 
 A callback which happens when the image is loaded. Passes the current crop state object and the image DOM element.
+
+#### ellipse (optional)
+
+If true, the selection will have an ellipse shape rather than a rectangular one. If a fixed aspect ratio is also specified, the shape will be strictly circular.
+
+#### outputPixelUnits (optional)
+
+If true, the crop value in callbacks will have pixel units instead of percentages.
 
 ## What about showing the crop on the client?
 
@@ -116,7 +132,7 @@ To develop run `npm start`, this will recompile your JS and SCSS on changes.
 
 You can test your changes by opening `demo/index.html` in a browser (you don't need to be running a server).
 
-A commit hook will ensure that `npm run release` is ran for you, or you can do it yourself so you have a single commit.
+When you are happy with your changes you can build to dist with `npm run release`.
 
 ## Browser compatibility
 
