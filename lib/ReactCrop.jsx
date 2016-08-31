@@ -1,5 +1,5 @@
 import React, { Component, PropTypes } from 'react';
-import { assign } from 'lodash';
+import _, { assign } from 'lodash';
 
 // Waiting for bug fix: https://github.com/yannickcr/eslint-plugin-react/issues/507
 /* eslint-disable react/sort-comp */
@@ -57,12 +57,8 @@ class ReactCrop extends Component {
   constructor(props) {
     super(props);
 
-    this.onDocMouseTouchMove = this.onDocMouseTouchMove.bind(this);
-    this.onDocMouseTouchEnd = this.onDocMouseTouchEnd.bind(this);
-    this.onImageLoad = this.onImageLoad.bind(this);
-    this.onComponentMouseTouchDown = this.onComponentMouseTouchDown.bind(this);
-    this.onComponentKeyDown = this.onComponentKeyDown.bind(this);
-    this.onCropMouseTouchDown = this.onCropMouseTouchDown.bind(this);
+    _.bindAll(this, ['onCropMouseTouchDown', 'onComponentKeyDown', 'onComponentMouseTouchDown',
+                     'onDocMouseTouchEnd', 'onDocMouseTouchMove', 'onImageLoad']);
 
     this.state = { crop: this.nextCropState(this.props.crop) };
   }
