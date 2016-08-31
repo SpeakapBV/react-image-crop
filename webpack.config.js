@@ -9,6 +9,7 @@ module.exports = {
     filename: 'ReactCrop.js',
   },
   externals: {
+    'lodash': 'lodash',
     'react': 'react'
   },
   module: {
