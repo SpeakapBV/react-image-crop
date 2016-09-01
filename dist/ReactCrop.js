@@ -65,6 +65,31 @@ module.exports =
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+	// see: http://stackoverflow.com/questions/27558996/how-can-i-test-for-clip-path-support
+	function supportsClipPath() {
+	  var base = 'clipPath';
+	  var prefixes = ['webkit', 'moz', 'ms', 'o'];
+	  var properties = [base];
+	  var testElement = document.createElement('div');
+	  var attribute = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+
+	  for (var i = 0; i < prefixes.length; i++) {
+	    properties.push(prefixes[i] + _lodash2.default.upperFirst(base));
+	  }
+
+	  for (var _i = 0; _i < properties.length; _i++) {
+	    var property = properties[_i];
+	    if (testElement.style[property] === '') {
+	      testElement.style[property] = attribute;
+	      if (testElement.style[property] !== '') {
+	        return true;
+	      }
+	    }
+	  }
+
+	  return false;
+	}
+
 	// Waiting for bug fix: https://github.com/yannickcr/eslint-plugin-react/issues/507
 	/* eslint-disable react/sort-comp */
 
@@ -78,7 +103,7 @@ module.exports =
 
 	    _lodash2.default.bindAll(_this, ['onCropMouseTouchDown', 'onComponentKeyDown', 'onComponentMouseTouchDown', 'onDocMouseTouchEnd', 'onDocMouseTouchMove', 'onImageLoad']);
 
-	    _this.state = { crop: _this.nextCropState(_this.props.crop) };
+	    _this.state = { crop: _this.nextCropState(_this.props.crop), width: 0, height: 0 };
 	    return _this;
 	  }
 
@@ -102,9 +127,14 @@ module.exports =
 	          this.imageRef.src = emptyGif;
 	          this.imageRef.src = src;
 	        } else {
-	          this.onImageLoad(this.imageRef);
+	          this.onImageLoad();
 	        }
 	      }
+	    }
+	  }, {
+	    key: 'componentWillMount',
+	    value: function componentWillMount() {
+	      this.supportsClipPath = supportsClipPath();
 	    }
 	  }, {
 	    key: 'componentWillReceiveProps',
@@ -385,13 +415,33 @@ module.exports =
 	      };
 	    }
 	  }, {
+	    key: 'getClipStyle',
+	    value: function getClipStyle() {
+	      var _state = this.state;
+	      var crop = _state.crop;
+	      var height = _state.height;
+	      var width = _state.width;
+
+	      return (0, _lodash.assign)(this.getCropStyle(), {
+	        backgroundImage: 'url(' + this.props.src + ')',
+	        backgroundPosition: -(crop.x * width) / 100 + 'px ' + -(crop.y * height) / 100 + 'px',
+	        backgroundSize: width + 'px ' + height + 'px',
+	        borderRadius: this.props.ellipse ? '50%' : 0
+	      });
+	    }
+	  }, {
 	    key: 'getCropStyle',
 	    value: function getCropStyle() {
+	      var _state2 = this.state;
+	      var crop = _state2.crop;
+	      var height = _state2.height;
+	      var width = _state2.width;
+
 	      return {
-	        top: this.state.crop.y + '%',
-	        left: this.state.crop.x + '%',
-	        width: this.state.crop.width + '%',
-	        height: this.state.crop.height + '%'
+	        top: crop.y * height / 100 + 'px',
+	        left: crop.x * width / 100 + 'px',
+	        width: crop.width * width / 100 + 'px',
+	        height: crop.height * height / 100 + 'px'
 	      };
 	    }
 	  }, {
@@ -619,19 +669,21 @@ module.exports =
 	    }
 	  }, {
 	    key: 'onImageLoad',
-	    value: function onImageLoad(imageEl) {
+	    value: function onImageLoad() {
 	      var crop = this.state.crop;
 
 	      // If there is a width or height then infer the other to
 	      // ensure the value is correct.
 	      if (crop.aspect) {
-	        this.ensureAspectDimensions(crop, imageEl);
+	        this.ensureAspectDimensions(crop, this.imageRef);
 	        this.cropInvalid = this.isCropInvalid(crop);
 	        this.setState({ crop: crop });
 	      }
 	      if (this.props.onImageLoaded) {
-	        this.props.onImageLoaded(this.getCropValue(), imageEl);
+	        this.props.onImageLoaded(this.getCropValue(), this.imageRef);
 	      }
+
+	      this.setState({ width: this.imageRef.width, height: this.imageRef.height });
 	    }
 	  }, {
 	    key: 'arrayDividedBy100',
@@ -798,10 +850,14 @@ module.exports =
 
 	      if (!this.cropInvalid) {
 	        cropSelection = this.createCropSelection();
-	        imageClip = {
-	          WebkitClipPath: this.props.ellipse ? this.getEllipseClipPath() : this.getPolygonClipPath(),
-	          clipPath: 'url("#ReactCropperClipPolygon")'
-	        };
+	        if (this.supportsClipPath) {
+	          imageClip = {
+	            WebkitClipPath: this.props.ellipse ? this.getEllipseClipPath() : this.getPolygonClipPath(),
+	            clipPath: 'url("#ReactCropperClipPolygon")'
+	          };
+	        } else {
+	          imageClip = this.getClipStyle();
+	        }
 	      }
 
 	      var componentClasses = ['ReactCrop'];
@@ -831,7 +887,7 @@ module.exports =
 	          tabIndex: '1',
 	          onKeyDown: this.onComponentKeyDown
 	        },
-	        this.renderSvg(),
+	        this.supportsClipPath ? this.renderSvg() : null,
 	        _react2.default.createElement('img', {
 	          ref: function ref(c) {
 	            _this4.imageRef = c;
@@ -839,9 +895,7 @@ module.exports =
 	          crossOrigin: 'anonymous',
 	          className: 'ReactCrop--image',
 	          src: this.props.src,
-	          onLoad: function onLoad(e) {
-	            _this4.onImageLoad(e.target);
-	          },
+	          onLoad: this.onImageLoad,
 	          alt: ''
 	        }),
 	        _react2.default.createElement(
@@ -852,14 +906,20 @@ module.exports =
 	              _this4.cropWrapperRef = c;
 	            }
 	          },
-	          _react2.default.createElement('img', {
-	            ref: function ref(c) {
-	              _this4.imageCopyRef = c;
+	          this.supportsClipPath ? _react2.default.createElement('img', {
+	            ref: function ref(_ref) {
+	              _this4.imageCopyRef = _ref;
 	            },
 	            className: 'ReactCrop--image-copy',
 	            src: this.props.src,
 	            style: imageClip,
 	            alt: ''
+	          }) : _react2.default.createElement('div', {
+	            ref: function ref(_ref2) {
+	              _this4.imageCopyRef = _ref2;
+	            },
+	            className: 'ReactCrop--image-copy',
+	            style: imageClip
 	          }),
 	          cropSelection
 	        ),

@@ -1,6 +1,31 @@
 import React, { Component, PropTypes } from 'react';
 import _, { assign } from 'lodash';
 
+// see: http://stackoverflow.com/questions/27558996/how-can-i-test-for-clip-path-support
+function supportsClipPath() {
+  const base = 'clipPath';
+  const prefixes = ['webkit', 'moz', 'ms', 'o'];
+  const properties = [base];
+  const testElement = document.createElement('div');
+  const attribute = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+
+  for (let i = 0; i < prefixes.length; i++) {
+    properties.push(prefixes[i] + _.upperFirst(base));
+  }
+
+  for (let i = 0; i < properties.length; i++) {
+    const property = properties[i];
+    if (testElement.style[property] === '') {
+      testElement.style[property] = attribute;
+      if (testElement.style[property] !== '') {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 // Waiting for bug fix: https://github.com/yannickcr/eslint-plugin-react/issues/507
 /* eslint-disable react/sort-comp */
 
@@ -60,7 +85,7 @@ class ReactCrop extends Component {
     _.bindAll(this, ['onCropMouseTouchDown', 'onComponentKeyDown', 'onComponentMouseTouchDown',
                      'onDocMouseTouchEnd', 'onDocMouseTouchMove', 'onImageLoad']);
 
-    this.state = { crop: this.nextCropState(this.props.crop) };
+    this.state = { crop: this.nextCropState(this.props.crop), width: 0, height: 0 };
   }
 
   componentDidMount() {
@@ -81,9 +106,13 @@ class ReactCrop extends Component {
         this.imageRef.src = emptyGif;
         this.imageRef.src = src;
       } else {
-        this.onImageLoad(this.imageRef);
+        this.onImageLoad();
       }
     }
+  }
+
+  componentWillMount() {
+    this.supportsClipPath = supportsClipPath();
   }
 
   componentWillReceiveProps(nextProps) {
@@ -349,12 +378,23 @@ class ReactCrop extends Component {
     };
   }
 
+  getClipStyle() {
+    const { crop, height, width } = this.state;
+    return assign(this.getCropStyle(), {
+      backgroundImage: `url(${this.props.src})`,
+      backgroundPosition: `${-(crop.x * width) / 100}px ${-(crop.y * height) / 100}px`,
+      backgroundSize: `${width}px ${height}px`,
+      borderRadius: (this.props.ellipse ? '50%' : 0),
+    });
+  }
+
   getCropStyle() {
+    const { crop, height, width } = this.state;
     return {
-      top: `${this.state.crop.y}%`,
-      left: `${this.state.crop.x}%`,
-      width: `${this.state.crop.width}%`,
-      height: `${this.state.crop.height}%`,
+      top: `${(crop.y * height) / 100}px`,
+      left: `${(crop.x * width) / 100}px`,
+      width: `${(crop.width * width) / 100}px`,
+      height: `${(crop.height * height) / 100}px`,
     };
   }
 
@@ -565,19 +605,21 @@ class ReactCrop extends Component {
     return (k * clientX) + d;
   }
 
-  onImageLoad(imageEl) {
+  onImageLoad() {
     const crop = this.state.crop;
 
     // If there is a width or height then infer the other to
     // ensure the value is correct.
     if (crop.aspect) {
-      this.ensureAspectDimensions(crop, imageEl);
+      this.ensureAspectDimensions(crop, this.imageRef);
       this.cropInvalid = this.isCropInvalid(crop);
       this.setState({ crop });
     }
     if (this.props.onImageLoaded) {
-      this.props.onImageLoaded(this.getCropValue(), imageEl);
+      this.props.onImageLoaded(this.getCropValue(), this.imageRef);
     }
+
+    this.setState({ width: this.imageRef.width, height: this.imageRef.height });
   }
 
   arrayDividedBy100(arr, delimeter = ' ') {
@@ -721,13 +763,17 @@ class ReactCrop extends Component {
 
     if (!this.cropInvalid) {
       cropSelection = this.createCropSelection();
-      imageClip = {
-        WebkitClipPath: (this.props.ellipse
-          ? this.getEllipseClipPath()
-          : this.getPolygonClipPath()
-        ),
-        clipPath: 'url("#ReactCropperClipPolygon")',
-      };
+      if (this.supportsClipPath) {
+        imageClip = {
+          WebkitClipPath: (this.props.ellipse
+            ? this.getEllipseClipPath()
+            : this.getPolygonClipPath()
+          ),
+          clipPath: 'url("#ReactCropperClipPolygon")',
+        };
+      } else {
+        imageClip = this.getClipStyle();
+      }
     }
 
     const componentClasses = ['ReactCrop'];
@@ -756,7 +802,7 @@ class ReactCrop extends Component {
         tabIndex="1"
         onKeyDown={this.onComponentKeyDown}
       >
-        {this.renderSvg()}
+        {this.supportsClipPath ? this.renderSvg() : null}
 
         <img
           ref={(c) => {
@@ -765,7 +811,7 @@ class ReactCrop extends Component {
           crossOrigin="anonymous"
           className="ReactCrop--image"
           src={this.props.src}
-          onLoad={(e) => { this.onImageLoad(e.target); }}
+          onLoad={this.onImageLoad}
           alt=""
         />
 
@@ -775,15 +821,19 @@ class ReactCrop extends Component {
             this.cropWrapperRef = c;
           }}
         >
-          <img
-            ref={(c) => {
-              this.imageCopyRef = c;
-            }}
-            className="ReactCrop--image-copy"
-            src={this.props.src}
-            style={imageClip}
-            alt=""
-          />
+          {this.supportsClipPath ?
+            <img
+              ref={ref => { this.imageCopyRef = ref; }}
+              className="ReactCrop--image-copy"
+              src={this.props.src}
+              style={imageClip}
+              alt=""
+            /> :
+            <div
+              ref={ref => { this.imageCopyRef = ref; }}
+              className="ReactCrop--image-copy"
+              style={imageClip}
+            />}
           {cropSelection}
         </div>
 
