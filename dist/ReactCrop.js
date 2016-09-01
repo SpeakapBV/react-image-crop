@@ -55,6 +55,8 @@ module.exports =
 
 	var _lodash = __webpack_require__(2);
 
+	var _lodash2 = _interopRequireDefault(_lodash);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -74,12 +76,7 @@ module.exports =
 
 	    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(ReactCrop).call(this, props));
 
-	    _this.onDocMouseTouchMove = _this.onDocMouseTouchMove.bind(_this);
-	    _this.onDocMouseTouchEnd = _this.onDocMouseTouchEnd.bind(_this);
-	    _this.onImageLoad = _this.onImageLoad.bind(_this);
-	    _this.onComponentMouseTouchDown = _this.onComponentMouseTouchDown.bind(_this);
-	    _this.onComponentKeyDown = _this.onComponentKeyDown.bind(_this);
-	    _this.onCropMouseTouchDown = _this.onCropMouseTouchDown.bind(_this);
+	    _lodash2.default.bindAll(_this, ['onCropMouseTouchDown', 'onComponentKeyDown', 'onComponentMouseTouchDown', 'onDocMouseTouchEnd', 'onDocMouseTouchMove', 'onImageLoad']);
 
 	    _this.state = { crop: _this.nextCropState(_this.props.crop) };
 	    return _this;
@@ -151,7 +148,7 @@ module.exports =
 	      var evData = this.evData;
 	      var clientPos = this.getClientPos(e);
 
-	      if (evData.isResize && crop.aspect && evData.cropOffset) {
+	      if (evData.isResize && crop.aspect && evData.cropOffset && !this.props.ellipse) {
 	        clientPos.y = this.straightenYPath(clientPos.x);
 	      }
 
@@ -481,14 +478,30 @@ module.exports =
 	      var crop = this.state.crop;
 	      var evData = this.evData;
 	      var imageAspect = evData.imageWidth / evData.imageHeight;
+	      var verticalOrd = evData.ord === 'n' || evData.ord === 's';
 
-	      // New width.
 	      var newWidth = evData.cropStartWidth + evData.xDiffPc;
+	      var newHeight = evData.cropStartHeight + evData.yDiffPc;
 
 	      if (evData.xCrossOver) {
-	        newWidth = Math.abs(newWidth);
+	        // Cap if polarity is inversed and the shape fills the x space.
+	        newWidth = Math.min(Math.abs(newWidth), evData.cropStartX);
 	      }
 
+	      if (evData.yCrossOver) {
+	        // Cap if polarity is inversed and the shape fills the y space.
+	        newHeight = Math.min(Math.abs(newHeight), evData.cropStartY);
+	      }
+
+	      if (crop.aspect) {
+	        if (verticalOrd) {
+	          newWidth = newHeight * crop.aspect / imageAspect;
+	        } else {
+	          newHeight = newWidth / crop.aspect * imageAspect;
+	        }
+	      }
+
+	      // Clamp new width.
 	      var maxWidth = this.props.maxWidth;
 
 	      // Stop the box expanding on the opposite side when some edges are hit.
@@ -499,20 +512,7 @@ module.exports =
 
 	      newWidth = this.clamp(newWidth, this.props.minWidth || 0, maxWidth);
 
-	      // New height.
-	      var newHeight = void 0;
-
-	      if (crop.aspect) {
-	        newHeight = newWidth / crop.aspect * imageAspect;
-	      } else {
-	        newHeight = evData.cropStartHeight + evData.yDiffPc;
-	      }
-
-	      if (evData.yCrossOver) {
-	        // Cap if polarity is inversed and the shape fills the y space.
-	        newHeight = Math.min(Math.abs(newHeight), evData.cropStartY);
-	      }
-
+	      // Clamp new height.
 	      var maxHeight = this.props.maxHeight;
 
 	      // Stop the box expanding on the opposite side when some edges are hit.
@@ -524,6 +524,7 @@ module.exports =
 	      newHeight = this.clamp(newHeight, this.props.minHeight || 0, maxHeight);
 
 	      if (crop.aspect) {
+	        newHeight = this.clamp(newWidth / crop.aspect * imageAspect, 0, 100);
 	        newWidth = this.clamp(newHeight * crop.aspect / imageAspect, 0, 100);
 	      }
 

@@ -123,7 +123,7 @@ class ReactCrop extends Component {
     const evData = this.evData;
     const clientPos = this.getClientPos(e);
 
-    if (evData.isResize && crop.aspect && evData.cropOffset) {
+    if (evData.isResize && crop.aspect && evData.cropOffset && !this.props.ellipse) {
       clientPos.y = this.straightenYPath(clientPos.x);
     }
 
@@ -424,14 +424,30 @@ class ReactCrop extends Component {
     const crop = this.state.crop;
     const evData = this.evData;
     const imageAspect = evData.imageWidth / evData.imageHeight;
+    const verticalOrd = (evData.ord === 'n' || evData.ord === 's');
 
-    // New width.
     let newWidth = evData.cropStartWidth + evData.xDiffPc;
+    let newHeight = evData.cropStartHeight + evData.yDiffPc;
 
     if (evData.xCrossOver) {
-      newWidth = Math.abs(newWidth);
+      // Cap if polarity is inversed and the shape fills the x space.
+      newWidth = Math.min(Math.abs(newWidth), evData.cropStartX);
     }
 
+    if (evData.yCrossOver) {
+      // Cap if polarity is inversed and the shape fills the y space.
+      newHeight = Math.min(Math.abs(newHeight), evData.cropStartY);
+    }
+
+    if (crop.aspect) {
+      if (verticalOrd) {
+        newWidth = (newHeight * crop.aspect) / imageAspect;
+      } else {
+        newHeight = (newWidth / crop.aspect) * imageAspect;
+      }
+    }
+
+    // Clamp new width.
     let maxWidth = this.props.maxWidth;
 
     // Stop the box expanding on the opposite side when some edges are hit.
@@ -444,20 +460,7 @@ class ReactCrop extends Component {
 
     newWidth = this.clamp(newWidth, this.props.minWidth || 0, maxWidth);
 
-    // New height.
-    let newHeight;
-
-    if (crop.aspect) {
-      newHeight = (newWidth / crop.aspect) * imageAspect;
-    } else {
-      newHeight = evData.cropStartHeight + evData.yDiffPc;
-    }
-
-    if (evData.yCrossOver) {
-      // Cap if polarity is inversed and the shape fills the y space.
-      newHeight = Math.min(Math.abs(newHeight), evData.cropStartY);
-    }
-
+    // Clamp new height.
     let maxHeight = this.props.maxHeight;
 
     // Stop the box expanding on the opposite side when some edges are hit.
@@ -471,6 +474,7 @@ class ReactCrop extends Component {
     newHeight = this.clamp(newHeight, this.props.minHeight || 0, maxHeight);
 
     if (crop.aspect) {
+      newHeight = this.clamp((newWidth / crop.aspect) * imageAspect, 0, 100);
       newWidth = this.clamp((newHeight * crop.aspect) / imageAspect, 0, 100);
     }
 
